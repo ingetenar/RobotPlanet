@@ -266,8 +266,8 @@ Tulemus: robot eemaldati kollektsioonist ning valitud roboti andmed tühjendati.
 Uue `GuardBot` alamklassi lisamiseks loodi GitHub Issue:
 
 - Issue: https://github.com/ingetenar/RobotPlanet/issues/1
-- Kaasüliõpilane: lisatakse hiljem
-- Pull request: lisatakse hiljem
+- Kaasüliõpilane: Oleksandr Bosiuk
+- Pull request: https://github.com/ingetenar/RobotPlanet/pull/2
 
 Kaasüliõpilase ülesanne on lisada `GuardBot` eraldi harus:
 
