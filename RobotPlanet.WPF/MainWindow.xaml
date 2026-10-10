@@ -48,6 +48,7 @@
                     <ComboBoxItem Content="CleanerBot"/>
                     <ComboBoxItem Content="ExplorerBot"/>
                     <ComboBoxItem Content="RepairBot"/>
+                    <ComboBoxItem Content="GuardBot"/>
                 </ComboBox>
             </StackPanel>
 
