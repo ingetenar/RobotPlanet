@@ -71,6 +71,10 @@ namespace RobotPlanet.WPF
                     case "RepairBot":
                         robot = new RepairBot(name, energy);
                         break;
+                    
+                    case "GuardBot":
+                        robot = new GuardBot(name, energy);
+                        break;
 
                     default:
                         AddLogMessage("Viga: tundmatu roboti tüüp.");
