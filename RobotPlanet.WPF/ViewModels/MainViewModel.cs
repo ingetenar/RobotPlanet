@@ -1,4 +1,4 @@
-﻿using RobotPlanet.Core;
+using RobotPlanet.Core;
 using RobotPlanet.WPF.Commands;
 using System;
 using System.Collections.Generic;
@@ -16,6 +16,10 @@ namespace RobotPlanet.WPF.ViewModels
         private readonly Repository<ExplorerBot> explorerRepository = new();
         private readonly Repository<RepairBot> repairRepository = new();
         private readonly Repository<GuardBot> guardRepository = new();
+
+        private readonly Repository<MedicBot> medicRepository = new();
+        private readonly Repository<MinerBot> minerRepository = new();
+        private readonly Repository<ChefBot> chefRepository = new();
 
         private readonly Dictionary<Robot, int> readLogCounts = new();
 
@@ -67,7 +71,10 @@ namespace RobotPlanet.WPF.ViewModels
             "CleanerBot",
             "ExplorerBot",
             "RepairBot",
-            "GuardBot"
+            "GuardBot",
+            "MedicBot",
+            "MinerBot",
+            "ChefBot"
         };
 
         public ObservableCollection<Robot> Robots { get; } = new();
@@ -278,40 +285,67 @@ namespace RobotPlanet.WPF.ViewModels
             switch (SelectedRepositoryName)
             {
                 case "CleanerBot":
-                    {
-                        CleanerBot robot =
-                            new CleanerBot(NewRobotName, energy);
+                {
+                    CleanerBot robot =
+                        new CleanerBot(NewRobotName, energy);
 
-                        cleanerRepository.Add(robot);
-                        return robot;
-                    }
+                    cleanerRepository.Add(robot);
+                    return robot;
+                }
 
                 case "ExplorerBot":
-                    {
-                        ExplorerBot robot =
-                            new ExplorerBot(NewRobotName, energy);
+                {
+                    ExplorerBot robot =
+                        new ExplorerBot(NewRobotName, energy);
 
-                        explorerRepository.Add(robot);
-                        return robot;
-                    }
+                    explorerRepository.Add(robot);
+                    return robot;
+                }
 
                 case "RepairBot":
-                    {
-                        RepairBot robot =
-                            new RepairBot(NewRobotName, energy);
+                {
+                    RepairBot robot =
+                        new RepairBot(NewRobotName, energy);
 
-                        repairRepository.Add(robot);
-                        return robot;
-                    }
+                    repairRepository.Add(robot);
+                    return robot;
+                }
 
                 case "GuardBot":
-                    {
-                        GuardBot robot =
-                            new GuardBot(NewRobotName, energy);
+                {
+                    GuardBot robot =
+                        new GuardBot(NewRobotName, energy);
 
-                        guardRepository.Add(robot);
-                        return robot;
-                    }
+                    guardRepository.Add(robot);
+                    return robot;
+                }
+
+                case "MedicBot":
+                {
+                    MedicBot robot =
+                        new MedicBot(NewRobotName, energy);
+
+                    medicRepository.Add(robot);
+                    return robot;
+                }
+
+                case "MinerBot":
+                {
+                    MinerBot robot =
+                        new MinerBot(NewRobotName, energy);
+
+                    minerRepository.Add(robot);
+                    return robot;
+                }
+
+                case "ChefBot":
+                {
+                    ChefBot robot =
+                        new ChefBot(NewRobotName, energy);
+
+                    chefRepository.Add(robot);
+                    return robot;
+                }
 
                 default:
                     throw new InvalidOperationException(
@@ -344,6 +378,18 @@ namespace RobotPlanet.WPF.ViewModels
 
                 case GuardBot guardBot:
                     guardRepository.Remove(guardBot);
+                    break;
+
+                case MedicBot medicBot:
+                    medicRepository.Remove(medicBot);
+                    break;
+
+                case MinerBot minerBot:
+                    minerRepository.Remove(minerBot);
+                    break;
+
+                case ChefBot chefBot:
+                    chefRepository.Remove(chefBot);
                     break;
 
                 default:
@@ -406,6 +452,21 @@ namespace RobotPlanet.WPF.ViewModels
                 case GuardBot guardBot:
                     result = guardRepository
                         .TriggerCrazyAction(guardBot);
+                    break;
+
+                case MedicBot medicBot:
+                    result = medicRepository
+                        .TriggerCrazyAction(medicBot);
+                    break;
+
+                case MinerBot minerBot:
+                    result = minerRepository
+                        .TriggerCrazyAction(minerBot);
+                    break;
+
+                case ChefBot chefBot:
+                    result = chefRepository
+                        .TriggerCrazyAction(chefBot);
                     break;
 
                 default:
@@ -525,28 +586,28 @@ namespace RobotPlanet.WPF.ViewModels
                 "GuardBot" =>
                     guardRepository.GetAll().Cast<Robot>(),
 
+                "MedicBot" =>
+                    medicRepository.GetAll().Cast<Robot>(),
+
+                "MinerBot" =>
+                    minerRepository.GetAll().Cast<Robot>(),
+
+                "ChefBot" =>
+                    chefRepository.GetAll().Cast<Robot>(),
+
                 _ => Enumerable.Empty<Robot>()
             };
         }
 
         private IEnumerable<Robot> GetAllRobots()
         {
-            IEnumerable<Robot> cleaners =
-                cleanerRepository.GetAll().Cast<Robot>();
-
-            IEnumerable<Robot> explorers =
-                explorerRepository.GetAll().Cast<Robot>();
-
-            IEnumerable<Robot> repairBots =
-                repairRepository.GetAll().Cast<Robot>();
-
-            IEnumerable<Robot> guardBots =
-                guardRepository.GetAll().Cast<Robot>();
-
-            return cleaners
-                .Concat(explorers)
-                .Concat(repairBots)
-                .Concat(guardBots);
+            return cleanerRepository.GetAll().Cast<Robot>()
+                .Concat(explorerRepository.GetAll())
+                .Concat(repairRepository.GetAll())
+                .Concat(guardRepository.GetAll())
+                .Concat(medicRepository.GetAll())
+                .Concat(minerRepository.GetAll())
+                .Concat(chefRepository.GetAll());
         }
 
         private void SyncRobotLogs()
@@ -614,10 +675,7 @@ namespace RobotPlanet.WPF.ViewModels
 
         private void RaiseAddCanExecuteChanged()
         {
-            if (AddCommand is RelayCommand command)
-            {
-                command.RaiseCanExecuteChanged();
-            }
+            RaiseCanExecuteChanged(AddCommand);
         }
 
         private void RaiseRobotCommandCanExecuteChanged()
