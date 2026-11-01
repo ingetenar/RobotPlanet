@@ -4,8 +4,11 @@ using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
+using System.Diagnostics;
 using System.Linq;
 using System.Runtime.CompilerServices;
+using System.Threading;
+using System.Threading.Tasks;
 using System.Windows.Input;
 
 namespace RobotPlanet.WPF.ViewModels
@@ -28,6 +31,13 @@ namespace RobotPlanet.WPF.ViewModels
         private string newRobotName = string.Empty;
         private string newRobotEnergy = "100";
         private string searchText = string.Empty;
+
+        private CancellationTokenSource? simulationCancellationTokenSource;
+        private string simulationWorkload = "1000000";
+        private string simulationStatus = "Valmis.";
+        private string totalSimulationTime = "Total: 0 ms";
+        private bool isSimulationRunning;
+        private bool simulateError;
 
         public MainViewModel()
         {
@@ -62,8 +72,21 @@ namespace RobotPlanet.WPF.ViewModels
             ApplyLinqCommand = new RelayCommand(
                 RefreshDisplayedRobots);
 
+            RunSequentialCommand = new RelayCommand(
+                RunSequential,
+                CanRunSimulation);
+
+            RunParallelCommand = new RelayCommand(
+                RunParallel,
+                CanRunSimulation);
+
+            CancelSimulationCommand = new RelayCommand(
+                CancelSimulation,
+                () => IsSimulationRunning);
+
             LogMessage("Rakendus käivitati.");
             RefreshDisplayedRobots();
+            RefreshSimulationOptions();
         }
 
         public ObservableCollection<string> RepositoryNames { get; } = new()
@@ -82,6 +105,14 @@ namespace RobotPlanet.WPF.ViewModels
         public ObservableCollection<string> SummaryResults { get; } = new();
 
         public ObservableCollection<string> LogMessages { get; } = new();
+
+        public ObservableCollection<SimulationRobotOption>
+            SimulationRobotOptions
+        { get; } = new();
+
+        public ObservableCollection<string>
+            SimulationResults
+        { get; } = new();
 
         public string SelectedRepositoryName
         {
@@ -206,6 +237,88 @@ namespace RobotPlanet.WPF.ViewModels
             }
         }
 
+        public string SimulationWorkload
+        {
+            get => simulationWorkload;
+
+            set
+            {
+                if (simulationWorkload == value)
+                {
+                    return;
+                }
+
+                simulationWorkload = value;
+                OnPropertyChanged();
+                RaiseSimulationCanExecuteChanged();
+            }
+        }
+
+        public string SimulationStatus
+        {
+            get => simulationStatus;
+
+            private set
+            {
+                if (simulationStatus == value)
+                {
+                    return;
+                }
+
+                simulationStatus = value;
+                OnPropertyChanged();
+            }
+        }
+
+        public string TotalSimulationTime
+        {
+            get => totalSimulationTime;
+
+            private set
+            {
+                if (totalSimulationTime == value)
+                {
+                    return;
+                }
+
+                totalSimulationTime = value;
+                OnPropertyChanged();
+            }
+        }
+
+        public bool IsSimulationRunning
+        {
+            get => isSimulationRunning;
+
+            private set
+            {
+                if (isSimulationRunning == value)
+                {
+                    return;
+                }
+
+                isSimulationRunning = value;
+                OnPropertyChanged();
+                RaiseSimulationCanExecuteChanged();
+            }
+        }
+
+        public bool SimulateError
+        {
+            get => simulateError;
+
+            set
+            {
+                if (simulateError == value)
+                {
+                    return;
+                }
+
+                simulateError = value;
+                OnPropertyChanged();
+            }
+        }
+
         public ICommand AddCommand { get; }
 
         public ICommand RemoveCommand { get; }
@@ -221,6 +334,12 @@ namespace RobotPlanet.WPF.ViewModels
         public ICommand RepairCommand { get; }
 
         public ICommand ApplyLinqCommand { get; }
+
+        public ICommand RunSequentialCommand { get; }
+
+        public ICommand RunParallelCommand { get; }
+
+        public ICommand CancelSimulationCommand { get; }
 
         private bool CanAddRobot()
         {
@@ -257,6 +376,7 @@ namespace RobotPlanet.WPF.ViewModels
                 Robot robot = CreateAndAddRobot(energy);
 
                 RefreshDisplayedRobots();
+                RefreshSimulationOptions();
                 SelectedRobot = robot;
 
                 SyncRobotLogs();
@@ -285,67 +405,67 @@ namespace RobotPlanet.WPF.ViewModels
             switch (SelectedRepositoryName)
             {
                 case "CleanerBot":
-                {
-                    CleanerBot robot =
-                        new CleanerBot(NewRobotName, energy);
+                    {
+                        CleanerBot robot =
+                            new CleanerBot(NewRobotName, energy);
 
-                    cleanerRepository.Add(robot);
-                    return robot;
-                }
+                        cleanerRepository.Add(robot);
+                        return robot;
+                    }
 
                 case "ExplorerBot":
-                {
-                    ExplorerBot robot =
-                        new ExplorerBot(NewRobotName, energy);
+                    {
+                        ExplorerBot robot =
+                            new ExplorerBot(NewRobotName, energy);
 
-                    explorerRepository.Add(robot);
-                    return robot;
-                }
+                        explorerRepository.Add(robot);
+                        return robot;
+                    }
 
                 case "RepairBot":
-                {
-                    RepairBot robot =
-                        new RepairBot(NewRobotName, energy);
+                    {
+                        RepairBot robot =
+                            new RepairBot(NewRobotName, energy);
 
-                    repairRepository.Add(robot);
-                    return robot;
-                }
+                        repairRepository.Add(robot);
+                        return robot;
+                    }
 
                 case "GuardBot":
-                {
-                    GuardBot robot =
-                        new GuardBot(NewRobotName, energy);
+                    {
+                        GuardBot robot =
+                            new GuardBot(NewRobotName, energy);
 
-                    guardRepository.Add(robot);
-                    return robot;
-                }
+                        guardRepository.Add(robot);
+                        return robot;
+                    }
 
                 case "MedicBot":
-                {
-                    MedicBot robot =
-                        new MedicBot(NewRobotName, energy);
+                    {
+                        MedicBot robot =
+                            new MedicBot(NewRobotName, energy);
 
-                    medicRepository.Add(robot);
-                    return robot;
-                }
+                        medicRepository.Add(robot);
+                        return robot;
+                    }
 
                 case "MinerBot":
-                {
-                    MinerBot robot =
-                        new MinerBot(NewRobotName, energy);
+                    {
+                        MinerBot robot =
+                            new MinerBot(NewRobotName, energy);
 
-                    minerRepository.Add(robot);
-                    return robot;
-                }
+                        minerRepository.Add(robot);
+                        return robot;
+                    }
 
                 case "ChefBot":
-                {
-                    ChefBot robot =
-                        new ChefBot(NewRobotName, energy);
+                    {
+                        ChefBot robot =
+                            new ChefBot(NewRobotName, energy);
 
-                    chefRepository.Add(robot);
-                    return robot;
-                }
+                        chefRepository.Add(robot);
+                        return robot;
+                    }
 
                 default:
                     throw new InvalidOperationException(
@@ -401,6 +521,7 @@ namespace RobotPlanet.WPF.ViewModels
             SelectedRobot = null;
 
             RefreshDisplayedRobots();
+            RefreshSimulationOptions();
             SyncRobotLogs();
 
             readLogCounts.Remove(removedRobot);
@@ -673,6 +794,285 @@ namespace RobotPlanet.WPF.ViewModels
             return string.Join(", ", abilities);
         }
 
+        private void RefreshSimulationOptions()
+        {
+            List<Robot> previouslySelected = SimulationRobotOptions
+                .Where(option => option.IsSelected)
+                .Select(option => option.Robot)
+                .ToList();
+
+            SimulationRobotOptions.Clear();
+
+            foreach (Robot robot in GetAllRobots())
+            {
+                SimulationRobotOption option =
+                    new SimulationRobotOption(robot);
+
+                option.IsSelected =
+                    previouslySelected.Contains(robot);
+
+                option.PropertyChanged += (_, eventArgs) =>
+                {
+                    if (eventArgs.PropertyName ==
+                        nameof(SimulationRobotOption.IsSelected))
+                    {
+                        RaiseSimulationCanExecuteChanged();
+                    }
+                };
+
+                SimulationRobotOptions.Add(option);
+            }
+
+            RaiseSimulationCanExecuteChanged();
+        }
+
+        private bool CanRunSimulation()
+        {
+            if (IsSimulationRunning)
+            {
+                return false;
+            }
+
+            if (!int.TryParse(
+                SimulationWorkload,
+                out int workload))
+            {
+                return false;
+            }
+
+            if (workload <= 0)
+            {
+                return false;
+            }
+
+            return SimulationRobotOptions.Count(
+                option => option.IsSelected) >= 3;
+        }
+
+        private async void RunSequential()
+        {
+            await RunSimulationAsync(false);
+        }
+
+        private async void RunParallel()
+        {
+            await RunSimulationAsync(true);
+        }
+
+        private async Task RunSimulationAsync(bool parallel)
+        {
+            if (!int.TryParse(
+                SimulationWorkload,
+                out int workload) ||
+                workload <= 0)
+            {
+                SimulationStatus =
+                    "Viga: workload peab olema positiivne täisarv.";
+
+                return;
+            }
+
+            List<SimulationRobotOption> selectedOptions =
+                SimulationRobotOptions
+                    .Where(option => option.IsSelected)
+                    .ToList();
+
+            if (selectedOptions.Count < 3)
+            {
+                SimulationStatus =
+                    "Vali vähemalt kolm robotit.";
+
+                return;
+            }
+
+            simulationCancellationTokenSource?.Dispose();
+
+            simulationCancellationTokenSource =
+                new CancellationTokenSource();
+
+            CancellationToken cancellationToken =
+                simulationCancellationTokenSource.Token;
+
+            IsSimulationRunning = true;
+            SimulationResults.Clear();
+            TotalSimulationTime = "Total: running...";
+
+            SimulationStatus = parallel
+                ? "Parallel simulation is running..."
+                : "Sequential simulation is running...";
+
+            Stopwatch totalStopwatch = Stopwatch.StartNew();
+
+            try
+            {
+                List<SimulationResult> results;
+
+                if (parallel)
+                {
+                    results =
+                        await RunParallelSimulationsAsync(
+                            selectedOptions,
+                            workload,
+                            cancellationToken);
+                }
+                else
+                {
+                    results =
+                        await RunSequentialSimulationsAsync(
+                            selectedOptions,
+                            workload,
+                            cancellationToken);
+                }
+
+                foreach (SimulationResult result in results)
+                {
+                    SimulationResults.Add(
+                        FormatSimulationResult(result));
+                }
+
+                if (results.Any(result => result.IsCancelled))
+                {
+                    SimulationStatus =
+                        "Simulation was cancelled.";
+                }
+                else if (results.Any(result => result.HasError))
+                {
+                    SimulationStatus =
+                        "Simulation completed with errors.";
+                }
+                else
+                {
+                    SimulationStatus =
+                        "Simulation completed successfully.";
+                }
+            }
+            catch (Exception exception)
+            {
+                SimulationStatus =
+                    $"Unexpected error: {exception.Message}";
+            }
+            finally
+            {
+                totalStopwatch.Stop();
+
+                TotalSimulationTime =
+                    $"Total: {totalStopwatch.ElapsedMilliseconds} ms";
+
+                IsSimulationRunning = false;
+
+                simulationCancellationTokenSource?.Dispose();
+                simulationCancellationTokenSource = null;
+            }
+        }
+
+        private async Task<List<SimulationResult>>
+            RunSequentialSimulationsAsync(
+                List<SimulationRobotOption> selectedOptions,
+                int workload,
+                CancellationToken cancellationToken)
+        {
+            List<SimulationResult> results = new();
+            RobotCpuSimulator simulator = new();
+
+            for (int index = 0;
+                 index < selectedOptions.Count;
+                 index++)
+            {
+                SimulationRobotOption option =
+                    selectedOptions[index];
+
+                bool forceError =
+                    SimulateError && index == 0;
+
+                SimulationResult result = await Task.Run(
+                    () => simulator.RunSimulation(
+                        option.Robot.Name,
+                        option.Robot.Energy,
+                        workload,
+                        cancellationToken,
+                        forceError));
+
+                results.Add(result);
+            }
+
+            return results;
+        }
+
+        private async Task<List<SimulationResult>>
+            RunParallelSimulationsAsync(
+                List<SimulationRobotOption> selectedOptions,
+                int workload,
+                CancellationToken cancellationToken)
+        {
+            RobotCpuSimulator simulator = new();
+
+            List<Task<SimulationResult>> tasks =
+                new List<Task<SimulationResult>>();
+
+            for (int index = 0;
+                 index < selectedOptions.Count;
+                 index++)
+            {
+                SimulationRobotOption option =
+                    selectedOptions[index];
+
+                bool forceError =
+                    SimulateError && index == 0;
+
+                Task<SimulationResult> task = Task.Run(
+                    () => simulator.RunSimulation(
+                        option.Robot.Name,
+                        option.Robot.Energy,
+                        workload,
+                        cancellationToken,
+                        forceError));
+
+                tasks.Add(task);
+            }
+
+            SimulationResult[] results =
+                await Task.WhenAll(tasks);
+
+            return results.ToList();
+        }
+
+        private void CancelSimulation()
+        {
+            if (!IsSimulationRunning)
+            {
+                return;
+            }
+
+            SimulationStatus = "Cancellation requested...";
+            simulationCancellationTokenSource?.Cancel();
+        }
+
+        private static string FormatSimulationResult(
+            SimulationResult result)
+        {
+            string status;
+
+            if (result.IsSuccessful)
+            {
+                status = "Completed";
+            }
+            else if (result.IsCancelled)
+            {
+                status = "Cancelled";
+            }
+            else
+            {
+                status = "Error";
+            }
+
+            return
+                $"{result.RobotName} | " +
+                $"{status} | " +
+                $"{result.FinalState} | " +
+                $"{result.ResultMessage} | " +
+                $"{result.DurationMilliseconds} ms";
+        }
+
         private void RaiseAddCanExecuteChanged()
         {
             RaiseCanExecuteChanged(AddCommand);
@@ -686,6 +1086,13 @@ namespace RobotPlanet.WPF.ViewModels
             RaiseCanExecuteChanged(ChargeCommand);
             RaiseCanExecuteChanged(ScanCommand);
             RaiseCanExecuteChanged(RepairCommand);
+        }
+
+        private void RaiseSimulationCanExecuteChanged()
+        {
+            RaiseCanExecuteChanged(RunSequentialCommand);
+            RaiseCanExecuteChanged(RunParallelCommand);
+            RaiseCanExecuteChanged(CancelSimulationCommand);
         }
 
         private static void RaiseCanExecuteChanged(ICommand command)
